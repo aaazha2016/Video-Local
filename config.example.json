@@ -1,0 +1,67 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8899,
+    "publicUrl": ""
+  },
+  "comfy": {
+    "instances": [
+      {
+        "id": "comfyui:local",
+        "label": "Local GPU",
+        "url": "http://127.0.0.1:8188",
+        "cuda": 0,
+        "enabled": true,
+        "maxConcurrent": 1,
+        "local": true
+      }
+    ],
+    "connectTimeoutMs": 20000,
+    "uploadTimeoutMs": 300000,
+    "promptTimeoutMs": 60000,
+    "imageJobTimeoutMs": 600000,
+    "videoJobTimeoutMs": 3600000
+  },
+  "storage": {
+    "dataDir": "./data",
+    "exportsDir": "./data/exports",
+    "uploadsDir": "./data/uploads",
+    "thumbsDir": "./data/thumbs",
+    "rendersDir": "./data/renders",
+    "draftsDir": "./data/drafts",
+    "logsDir": "./data/logs",
+    "workflowsDir": "./data/workflows"
+  },
+  "runtime": {
+    "pythonPath": "",
+    "ffmpegPath": ""
+  },
+  "auth": {
+    "enabled": true,
+    "username": "admin",
+    "password": "replace-with-a-strong-password",
+    "jwtSecret": "replace-with-a-random-secret"
+  },
+  "tts": {
+    "pythonPath": "",
+    "defaultProvider": "tts_edge",
+    "defaultVoice": "zh-CN-XiaoxiaoNeural",
+    "maxChars": 2000,
+    "timeoutMs": 120000,
+    "edgeAttempts": 3
+  },
+  "promptEngine": {
+    "enabled": true,
+    "clipName": "qwen_3_4b.safetensors",
+    "clipType": "ltxv"
+  },
+  "vocal": {
+    "localInstance": "comfyui:local",
+    "machine": "",
+    "rvcDir": ""
+  },
+  "music": {
+    "localInstance": "comfyui:local",
+    "machine": ""
+  }
+}
