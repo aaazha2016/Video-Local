@@ -1,0 +1,17 @@
+{
+  "name": "ai-video-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地 ComfyUI 驱动的 AI 短视频创作平台（文生图/图生图/图生视频/多镜头故事模式）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "selftest": "node tools/selftest.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "engines": { "node": ">=22.5.0" }
+}

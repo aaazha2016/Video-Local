@@ -1,0 +1,31 @@
+# 反向代理示例：把 8899 的创作台挂到 80/443，并放开 WebSocket 与文件下载。
+# 注意：/files 下是成片素材，体积较大，client_max_body_size 需与 config.json
+# 的 limits.maxUploadMB 保持一致（默认 200MB）。
+
+server {
+    listen 80;
+    server_name studio.example.com;
+
+    client_max_body_size 200m;
+    proxy_read_timeout 3600s;      # 视频任务耗时较长，别让网关先掐断
+    proxy_send_timeout 3600s;
+
+    location /api/ws {
+        proxy_pass http://127.0.0.1:8899;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8899;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;        # 生成结果支持边下边看
+    }
+}

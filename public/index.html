@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>AI 短视频创作平台 · 本地 ComfyUI 版</title>
+<link rel="stylesheet" href="/css/app.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%236d5cff%27/%3E%3Cpath d=%27M20 44V20l24 12-24 12z%27 fill=%27white%27/%3E%3C/svg%3E" />
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AV</div>
+      <div class="brand-text"><b>AI 短视频创作台</b><span>本地 ComfyUI · 无水印 1080P</span></div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="sidebar-foot">
+      <div id="gpu-card" class="gpu-card">正在读取显卡状态…</div>
+      <div class="ver">v1.0 · 本地模型版</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div id="crumb" class="crumb">工作台</div>
+      <div class="topbar-right">
+        <button id="btn-cap" class="ghost" title="重新检测本机可用的模型与能力">能力自检</button>
+        <button id="btn-queue" class="ghost" title="打开任务中心">任务 <span id="queue-badge" class="badge">0</span></button>
+      </div>
+    </header>
+    <section id="view" class="view"></section>
+  </main>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="modal-root"></div>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

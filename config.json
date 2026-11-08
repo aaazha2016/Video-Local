@@ -1,0 +1,177 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8899,
+    "publicUrl": ""
+  },
+  "comfy": {
+    "instances": [
+      {
+        "id": "comfyui:8188",
+        "label": "GPU 0",
+        "url": "http://192.168.0.222:8188",
+        "cuda": 0,
+        "enabled": true,
+        "maxConcurrent": 1
+      },
+      {
+        "id": "comfyui:8189",
+        "label": "GPU 1",
+        "url": "http://192.168.0.222:8189",
+        "cuda": 1,
+        "enabled": true,
+        "maxConcurrent": 1
+      },
+      {
+        "id": "comfyui:8190",
+        "label": "GPU 2",
+        "url": "http://192.168.0.222:8190",
+        "cuda": 2,
+        "enabled": true,
+        "maxConcurrent": 1
+      },
+      {
+        "id": "comfyui:8191",
+        "label": "GPU 3",
+        "url": "http://192.168.0.222:8191",
+        "cuda": 3,
+        "enabled": true,
+        "maxConcurrent": 1
+      },
+      {
+        "id": "comfyui:local",
+        "label": "本机 GPU（5090）",
+        "url": "http://127.0.0.1:8188",
+        "cuda": 0,
+        "enabled": true,
+        "maxConcurrent": 1,
+        "local": true,
+        "workflows": [
+          "WF-28",
+          "WF-29",
+          "WF-30",
+          "WF-31",
+          "WF-32",
+          "WF-33",
+          "WF-34",
+          "WF-35"
+        ]
+      }
+    ],
+    "connectTimeoutMs": 20000,
+    "uploadTimeoutMs": 300000,
+    "promptTimeoutMs": 60000,
+    "imageJobTimeoutMs": 600000,
+    "videoJobTimeoutMs": 3600000,
+    "idleFreeSeconds": 300,
+    "objectInfoCacheSeconds": 600,
+    "audioMuxMaxDecodeGB": 40,
+    "quietFreeSeconds": 20
+  },
+  "storage": {
+    "dataDir": "./data",
+    "exportsDir": "./data/exports",
+    "uploadsDir": "./data/uploads",
+    "thumbsDir": "./data/thumbs",
+    "rendersDir": "./data/renders",
+    "draftsDir": "./data/drafts",
+    "logsDir": "./data/logs",
+    "workflowsDir": "./data/workflows",
+    "comfyOutputCleanupHours": 24,
+    "assetRetentionDays": 30
+  },
+  "limits": {
+    "maxUploadMB": 200,
+    "maxRefAssets": 20,
+    "videoMaxDurationS": 20,
+    "maxRefImagesPerRequest": 9,
+    "maxRefVideosPerRequest": 3,
+    "maxRefAudiosPerRequest": 3,
+    "aspects": {
+      "9:16": {
+        "genWidth": 720,
+        "genHeight": 1280,
+        "outWidth": 1080,
+        "outHeight": 1920
+      },
+      "1:1": {
+        "genWidth": 768,
+        "genHeight": 768,
+        "outWidth": 1080,
+        "outHeight": 1080
+      },
+      "16:9": {
+        "genWidth": 1280,
+        "genHeight": 720,
+        "outWidth": 1920,
+        "outHeight": 1080
+      },
+      "4:3": {
+        "genWidth": 1024,
+        "genHeight": 768,
+        "outWidth": 1440,
+        "outHeight": 1080
+      },
+      "3:4": {
+        "genWidth": 768,
+        "genHeight": 1024,
+        "outWidth": 1080,
+        "outHeight": 1440
+      }
+    }
+  },
+  "export": {
+    "codec": "h264",
+    "crf": 16,
+    "targetFps": 24,
+    "watermark": false
+  },
+  "runtime": {
+    "pythonPath": "E:\\ComfyUI-aki-v2\\python\\python.exe",
+    "ffmpegPath": "E:\\ComfyUI-aki-v2\\tools\\ffmpeg\\ffmpeg.exe"
+  },
+  "mux": {
+    "audioBitrate": "192k",
+    "sampleRate": 44100,
+    "channels": 2,
+    "fallbackCrf": 18
+  },
+  "auth": {
+    "enabled": false,
+    "username": "admin",
+    "password": "admin123",
+    "jwtSecret": "change-me-in-production"
+  },
+  "tts": {
+    "pythonPath": "E:\\ComfyUI-aki-v2\\python\\python.exe",
+    "defaultProvider": "tts_edge",
+    "defaultVoice": "zh-CN-XiaoxiaoNeural",
+    "maxChars": 2000,
+    "timeoutMs": 120000,
+    "edgeAttempts": 3
+  },
+  "promptEngine": {
+    "enabled": true,
+    "clipName": "qwen_3_4b.safetensors",
+    "clipType": "ltxv"
+  },
+  "vocal": {
+    "localInstance": "comfyui:local",
+    "machine": "本机 192.168.0.128",
+    "rvcDir": "E:\\ComfyUI-aki-v2\\ComfyUI\\models\\TTS\\RVC"
+  },
+  "music": {
+    "localInstance": "comfyui:local",
+    "machine": "本机 192.168.0.128"
+  },
+  "lyrics": {
+    "asr": {
+      "enabled": true,
+      "pythonPath": "",
+      "modelDir": "",
+      "device": "cuda",
+      "compute": "float16",
+      "timeoutMs": 900000
+    }
+  }
+}

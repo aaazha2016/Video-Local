@@ -1,0 +1,22 @@
+# AI 短视频创作台 —— 后端服务（Node.js）
+# 安装：sudo cp deploy/ai-video-studio.service /etc/systemd/system/
+#       sudo systemctl daemon-reload && sudo systemctl enable --now ai-video-studio
+[Unit]
+Description=AI Video Studio (local ComfyUI front-end)
+After=network-online.target comfyui.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ai-video-studio
+ExecStart=/usr/bin/node /opt/ai-video-studio/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+# 生成侧全部在本机 ComfyUI，这里只需要占用一个 Web 端口
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
