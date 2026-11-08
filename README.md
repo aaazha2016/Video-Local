@@ -243,6 +243,26 @@ ComfyUI 是把模型常驻在显存里的，跑完视频如果不主动释放，
 - 模板广场每张风格卡现在有两个按钮：「用于创作台」和「用于故事创作」，点后者直接带着这个风格跳到故事创作。
 - 「① AI 拆分镜」「② 一键生成全部镜头」「单镜头生成」都会把这两个选择一起提交给后端。
 
+### 故事创作：一键生成全部镜头为什么能/不能多卡并行
+
+并发度不是写死的，来源是 `jobs.pool.parallelSlots()` —— 把 4 台通用 ComfyUI（222 上的 8188–8191）
+当前**空闲槽位**加起来（每台 `maxConcurrent = 1`）。所以正常情况下是 4 个镜头同时跑。
+
+**踩过的坑（2026-11-08）**：并发度会莫名其妙掉到 1。实测 09:37 还是 4，09:48 就变成 1，之后一直 1。
+根因是 `inst.activeJobs` 这个**手工加减的槽位计数器漏减**：
+`onExecutionError` 的 OOM / int8-VAE 重试分支先把 `job.instance` 清成 `null`、再调 `release()`，
+而 `release()` 是靠 `job.instance` 找该扣哪张卡的 —— 找不到就什么都不扣。
+漏一次之后 `slotsFree = maxConcurrent - activeJobs = 0`，那张卡再也接不到活，4 卡变 1 卡。
+
+修法（`src/jobs.js`）：
+- `claim()` 时用 `claimedInst` 记住「这个任务占的是哪张卡」，`release()` 按它归还，不看 `job.instance`；
+- 两个重试分支改成**先 release 再清空 instance 重排**（顺序写反就是漏槽位）；
+- 新增 `reconcileSlots()`：每次巡检以 `inflight` 为准重算各卡 `activeJobs`（只下调，且实例队列里确实有任务在跑时不动）——就算以后还有别的路径漏减，1.5 秒内也会自愈；
+- `resume()` 重新挂回重启前还在跑的任务时，把它占的槽位补记回来，避免重启后同一张卡被叠任务。
+
+自查命令：`GET /api/system/instances` 看每张卡的 `active` / `slots_free`，
+`GET /api/system/pool` 看 `capacity.free`；故事创作日志里会打印「并发度 N」。
+
 ### 故事创作：镜头数量按你填的来（拆不满会自动续写）
 
 「① AI 拆分镜」的镜头数（输入框上限已从 12 放到 60）现在是**硬要求**，不再是「跟模型商量」：

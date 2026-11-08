@@ -50,6 +50,7 @@ class JobManager extends EventEmitter {
     super();
     this.pool = pool;
     this.inflight = new Set();    // 已派发但未到终态的任务 id（多卡并行时同时存在多个）
+    this.claimedInst = new Map(); // jobId → 认领时占用的实例 id（release 用它归还槽位，别依赖 job.instance）
     this.uploads = new Map();     // assetId → comfy 文件名（进程级缓存）
     this.log = log;
     this.timer = null;
@@ -110,6 +111,13 @@ class JobManager extends EventEmitter {
         } catch (e) { alive = false; }
       }
       if (alive) {
+        // 重新挂回时也要把它占的槽位补记回来：否则重启后这张卡会被当成空闲，
+        // 调度器会在同一个 ComfyUI 上再叠一个任务（实测会把卡压到 OOM / 排队）。
+        if (inst) {
+          inst.activeJobs += 1;
+          this.claimedInst.set(j.id, inst.id);
+          this.inflight.add(j.id);
+        }
         log.info(`任务 ${j.id} 重启后重新挂回 ${j.instance}（ComfyUI 仍在处理，产物照常回填）`);
         continue;
       }
@@ -186,6 +194,7 @@ class JobManager extends EventEmitter {
   /** 占用一个槽位并置为 dispatching，避免下一轮重复取到同一任务 */
   claim(inst, job) {
     inst.activeJobs += 1;
+    this.claimedInst.set(job.id, inst.id);                 // 记住「占的是哪张卡」：release 时不能看 job.instance
     this.markUsed(inst.id);                                // 有活儿了：释放冷却重新开始
     this.inflight.add(job.id);
     store.job.update(job.id, { status: "dispatching", instance: inst.id });
@@ -196,7 +205,12 @@ class JobManager extends EventEmitter {
     if (!this.inflight.has(jobId)) return;
     this.inflight.delete(jobId);
     const job = store.job.get(jobId);
-    const inst = job?.instance ? this.pool.instances.find((i) => i.id === job.instance) : null;
+    // 认领时的实例才是真正占了槽位的那张卡。不能用 job.instance：
+    // OOM / int8-VAE 重试会把 instance 清成 null 再重排，按它归还就会把槽位漏掉；
+    // 漏一次 slotsFree 就是 0，故事创作会从「4 卡并行」退化成并发度 1（附录 AL）。
+    const instId = this.claimedInst.get(jobId) || job?.instance || null;
+    this.claimedInst.delete(jobId);
+    const inst = instId ? this.pool.instances.find((i) => i.id === instId) : null;
     if (inst) inst.activeJobs = Math.max(0, inst.activeJobs - 1);
     if (inst && job?.prompt_id) inst.currentPromptIds?.delete(job.prompt_id);
     this.orphanTicks.delete(jobId);
@@ -311,7 +325,35 @@ class JobManager extends EventEmitter {
     await this.freeIdle({ reason: "长时间空闲" });
   }
 
+  /**
+   * 槽位计数自愈：以 inflight 为准重算每张卡的 activeJobs。
+   *
+   * activeJobs 是纯手工加减的计数器，任何一条「漏减 / 重复减」的路径都会让它回不了零；
+   * 而 slotsFree = maxConcurrent - activeJobs —— 漏成 1 之后这张卡就再也不会被派活，
+   * 故事创作的并发度会从 4 掉到 1（用户看到的「一键生成全部镜头不能多卡并行」）。
+   * 以 inflight 为准重算（高了压低、低了补回）；只有「需要下调、而实例队列里确实还有东西在跑」
+   * 时跳过（例如 vocal.js 为 Demucs 临时占位，那不是普通任务队列里的活儿）。
+   */
+  reconcileSlots() {
+    const expect = new Map();
+    for (const jobId of [...this.inflight]) {
+      const j = store.job.get(jobId);
+      if (!j) { this.inflight.delete(jobId); this.claimedInst.delete(jobId); continue; }
+      const instId = this.claimedInst.get(jobId) || j.instance;
+      if (instId) expect.set(instId, (expect.get(instId) || 0) + 1);
+    }
+    for (const inst of this.pool.instances) {
+      const want = Math.min(inst.maxConcurrent, expect.get(inst.id) || 0);
+      if (inst.activeJobs === want) continue;
+      if (inst.activeJobs > want && Number(inst.queueLen) > 0) continue;
+      log.warn(`槽位计数自愈 ${inst.id}: ${inst.activeJobs} → ${want}`);
+      inst.activeJobs = want;
+    }
+  }
+
   async sweep() {
+    // 先对一次账：槽位计数一旦和真实在飞的任务对不上，多卡并行就会被永久锁死
+    this.reconcileSlots();
     const jobs = store.job.running();
     // 空闲显存回收：内部有 20 秒节流 + 单卡互斥，这里不 await，
     // 免得刷新队列的往返拖慢了同一轮的超时判定
@@ -722,9 +764,10 @@ class JobManager extends EventEmitter {
       store.job.update(job.id, {
         params: { ...job.params, _oomRetried: true, max_pixels: Math.round((job.params.max_pixels || 1280 * 1024) * 0.55) },
       });
+      // 先归还槽位、再清空 instance 重排：顺序反了 release 就找不到该扣哪张卡（槽位泄漏）
+      this.release(job.id);
       store.job.update(job.id, { status: "queued", prompt_id: null, progress: 0, instance: null, started_at: null });
       this.emit("job", { job_id: job.id, type: "log", message: "显存不足：已释放显存并降分辨率重试" });
-      this.release(job.id);
       return;
     }
     if (isKernel && !job.params?._turboRetried) {
@@ -732,12 +775,12 @@ class JobManager extends EventEmitter {
       if (usesInt8Vae(wfj)) {
         const inst = this.pool.instances.find((i) => i.id === job.instance);
         try { await inst?.freeMemory(); } catch { /* ignore */ }
+        this.release(job.id);
         store.job.update(job.id, {
           params: { ...job.params, _turboRetried: true, _fp16Vae: true },
           status: "queued", prompt_id: null, progress: 0, instance: null, started_at: null,
         });
         this.emit("job", { job_id: job.id, type: "log", message: "int8 VAE 在当前显卡驱动上跑不了，已自动换 fp16 VAE 重跑" });
-        this.release(job.id);
         return;
       }
     }
